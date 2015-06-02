@@ -591,6 +591,14 @@ public class GR extends Activity {
 			setFocusable(true);
 			setFocusableInTouchMode(true);
 			GraphicsImm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+      if (android.os.Build.VERSION.SDK_INT >= 11) {  // Hardware acceleration is supported starting API 11
+        setLayerType(
+          (Settings.getGraphicAcceleration(context) == false)
+          ? View.LAYER_TYPE_SOFTWARE          // Disable hardware acceleration
+          : View.LAYER_TYPE_HARDWARE          // Enable hardware acceleration
+          , null
+        );
+      }
 		}
 
 		synchronized public void setOrientation(int orientation) {	// Convert and apply orientation setting
