@@ -4,7 +4,7 @@
 BASIC! is an implementation of the Basic programming language for
 Android devices.
 
-Copyright (C) 2013 - 2015 Paul Laughton
+Copyright (C) 2013 - 2019 Paul Laughton
 
 This file is part of BASIC! for Android
 
@@ -27,7 +27,7 @@ This file is part of BASIC! for Android
 -->
 
 <resources>
-    <string name="version">01.87.02</string>
+    <string name="version">01.92</string>
 
     <!-- The application name displayed in the Launcher -->
     <string name="app_name">BASIC!</string>
@@ -56,9 +56,10 @@ This file is part of BASIC! for Android
     <string name="select_name">BASIC! Select</string>
     <string name="textinput_name">BASIC! Text Input</string>
 
-    <!-- The splash screen settings: display and background color -->
+    <!-- The splash screen settings: display, background color, minimum display time -->
     <bool name="splash_display">true</bool>
     <color name="splash_color">#FFFFFF</color>
+    <integer name="splash_time">1500</integer>
 
     <!-- The default text and background colors selected in Preferences -->
     <integer name="color1">0xff000000</integer>

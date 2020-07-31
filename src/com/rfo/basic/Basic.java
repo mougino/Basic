@@ -5,7 +5,7 @@ Android devices.
 
 This file is part of BASIC! for Android
 
-Copyright (C) 2010 - 2015 Paul Laughton
+Copyright (C) 2010 - 2019 Paul Laughton
 
     BASIC! is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,6 +21,8 @@ Copyright (C) 2010 - 2015 Paul Laughton
     along with BASIC!.  If not, see <http://www.gnu.org/licenses/>.
 
     You may contact the author or current maintainers at http://rfobasic.freeforums.org
+
+	Localization added 2018 by Hirokazu Yamazaki (puziro).
 
 *************************************************************************************************/
 
@@ -44,12 +46,15 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -76,11 +81,14 @@ import javax.crypto.spec.PBEParameterSpec;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
 
+//new permission system
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+
 
 public class Basic extends Activity {
 
 	private static final String LOGTAG = "Basic";
-	private static final String CLASSTAG = Basic.class.getSimpleName();
 
 	public static final String SOURCE_DIR    = "source";
 	public static final String DATA_DIR      = "data";
@@ -99,18 +107,16 @@ public class Basic extends Activity {
 
 	public static ArrayList<Run.ProgramLine> lines;			// Program lines for execution
 
-	public static Context BasicContext;						// saved so we do not have to pass it around
-	public static Context theRunContext;
+	public static ContextManager mContextMgr = null;
+	public static String mBasicPackage = "";				// not valid but not null
 
-	public static String SD_ProgramPath = "";	// Used by Load/Save
-	public static Intent theProgramRunner;
-
-	private Background theBackground;						// Background task ID
 	private TextView mProgressText;
 	private Dialog mProgressDialog;
 	private ImageView mSplash;								// ImageView for splash screen
 
 	public static TextStyle defaultTextStyle;
+
+	public static String mDefaultFirstLine;					// Default first line for clearProgram()
 
 	public static boolean checkSDCARD(char mount) {			// mount is 'w' for writable,
 															// 'r' for either readable or writable
@@ -120,12 +126,50 @@ public class Basic extends Activity {
 		return false;
 	}
 
+	// ********************* New permissions system *********************
+	// Added March, 2019, by Nicolas Mougin. Permissions management required for Android 6+.
+	// Check of permissions and request/callback through onRequestPermissionsResult() is
+	// done at the end of the onCreate() method, and conditions creating the activity
+
+	public static final int MANIFEST_PERMISSION_REQUEST = 0;
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		switch (requestCode) {
+			case MANIFEST_PERMISSION_REQUEST:
+				if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+					// Log.v(LOGTAG, "Permissions granted by user: create activity");
+					if (isAPK) { createForAPK(); } else { createForSB(); }
+				} else {
+					// Log.v(LOGTAG, "Permissions denied by user: quitting");
+					Toast.makeText(getApplicationContext(),
+							getString(R.string.error_permission_denied),
+							Toast.LENGTH_SHORT).show();
+					finish();
+				}
+				break;
+			default:
+				super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		}
+	}
+
+	public static String[] getPermissionsFromManifest(Context context) {
+		try {
+			return context.getPackageManager().getPackageInfo(context.getPackageName(),
+					PackageManager.GET_PERMISSIONS).requestedPermissions;
+		} catch (PackageManager.NameNotFoundException e) {
+			throw new RuntimeException("This should have never happened.", e);
+		}
+	}
+	// ******************************************************************
+
 	public static void setFilePaths(String basePath) {		// set both basePath and filePath
 															// public so LauncherShortcuts can use it
-		if (basePath.equals("none"))
+		if (basePath.equals("none")) {
 			basePath = Environment.getExternalStorageDirectory().getPath();
+		}
 		Basic.basePath = basePath;
-		Basic.filePath = basePath + File.separatorChar + AppPath;
+		Basic.filePath = new File(basePath, AppPath).getPath();	// add AppPath and fix slashes
 	}
 
 	public static String getBasePath() {
@@ -136,19 +180,20 @@ public class Basic extends Activity {
 		return filePath;
 	}
 
+	// A "" parameter adds a file separator. A null argument does not.
 	public static String getFilePath(String subdir, String subPath) {
+		String path = subPath;
 		// if (!subPath.startsWith("/"))	uncomment to enable absolute paths
 		{
-			StringBuilder path = new StringBuilder(filePath);
-			if (subdir != null) { path.append(File.separatorChar).append(subdir); }
-			if (subPath != null) { path.append(File.separatorChar).append(subPath); }
-			subPath = path.toString();
+			StringBuilder bldPath = new StringBuilder(filePath);
+			if (subdir != null) { bldPath.append(File.separatorChar).append(subdir); }
+			if (subPath != null) { bldPath.append(File.separatorChar).append(subPath); }
+			path = bldPath.toString();
 		}
-		try {
-			subPath = new File(subPath).getCanonicalPath();
-			if (subPath.length() == 0) { subPath = new File(subPath).getAbsolutePath(); }
-		} catch(IOException e) { /* use subPath */ }
-		return subPath;
+		File file = new File(path);
+		try                  { path = file.getCanonicalPath(); }
+		catch(IOException e) { path = file.getAbsolutePath(); }
+		return path;
 	}
 
 	public static String getSourcePath(String subPath) {
@@ -179,9 +224,19 @@ public class Basic extends Activity {
 		return path;												// unmodified path if getCanonicalPath threw exception
 	}
 
+	public static ContextManager getContextManager() {
+		return mContextMgr;
+	}
+
+	public static void clearContextManager() {			// unregister Run-related Contexts
+		mContextMgr.clearProgramContexts();				// but keep ACTIVITY_APP context
+	}
+
 	private void initVars() {
 		// Some of these may not need initialization; if so I choose to err on the side of caution
-		BasicContext = getApplicationContext();
+		Context appContext = getApplicationContext();
+		mContextMgr = new ContextManager(appContext);
+		mBasicPackage = appContext.getPackageName();
 
 		Resources res = getResources();
 		AppPath = res.getString(R.string.app_path);
@@ -190,14 +245,15 @@ public class Basic extends Activity {
 		apkCreateDataBaseDir = res.getBoolean(R.bool.apk_create_database_dir);
 
 		DoAutoRun = false;
-		theProgramRunner = null;
+
+		mDefaultFirstLine = getString(R.string.display_text_default_first_line);
 	}
 
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);					// Set up of fresh start
-		Log.v(LOGTAG, CLASSTAG + " onCreate");
+		Log.v(LOGTAG, "onCreate: " + this);
 
 		initVars();
 		Settings.setDefaultValues(this, isAPK);				// if isAPK, force to default settings
@@ -207,20 +263,37 @@ public class Basic extends Activity {
 		String base = Settings.getBaseDrive(this);
 		setFilePaths(base);
 
-		if (isAPK) {
-			createForAPK();
-		} else {
-			createForSB();
+		// Request permissions at RunTime on API >= 23
+		if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.M) || permissionsGranted()) {
+			// Older than API 23 or permissions already granted. Start Activity.
+			if (isAPK) { createForAPK(); } else { createForSB(); }
+		} // else waiting for user response to permission request.
+	}
+
+	// Added March, 2019, by Nicolas Mougin. Permissions management required for Android 6+.
+	private boolean permissionsGranted() {
+		String[] manifestPermissions = getPermissionsFromManifest(getApplicationContext());
+		// Log.v(LOGTAG, "Need permissions: " + Arrays.toString(manifestPermissions));
+		for (String perm: manifestPermissions) {
+			if (perm.equals("android.permission.ACCESS_MOCK_LOCATION")) { continue; } // don't request this permission (crash)
+			if ( PackageManager.PERMISSION_GRANTED != ContextCompat.checkSelfPermission(this, perm) ) {
+				// At least 1 permission from manifest was not granted by user.
+				// Log.v(LOGTAG, perm + " not previously granted.");
+				ActivityCompat.requestPermissions(this, manifestPermissions, MANIFEST_PERMISSION_REQUEST);
+				return false;
+			}
 		}
+		// Log.v(LOGTAG, "All permissions already granted. Start Activity...");
+		return true;
 	}
 
 	private void createForSB() {							// Create code for Standard Basic
 
 		/* If we have entered Basic and there is a program running, then we should not
 		 * interfere with that run. We will just exit this attempt. A program running
-		 * is indicated by theRunContext ! = null
+		 * is indicated by Run context != null.
 		 */
-		if (theRunContext != null) {
+		if (mContextMgr.getContext(ContextManager.ACTIVITY_RUN) != null) {
 			finish();
 			return;
 		}
@@ -240,28 +313,30 @@ public class Basic extends Activity {
 			if (myIntent.getData() != null) FileName = myIntent.getData().getPath();
 		}
 
-		if ((FileName != null) && !FileName.equals("")) {
-			Bundle bb = new Bundle();
-			bb.putString("fn", FileName);								// fn is the tag for the filename parameter
-			Intent intent = new Intent(BasicContext, AutoRun.class);	// in the bundle going to AutoRun
-			intent.putExtras(bb);
+		if ((FileName != null) && !FileName.equals("")) {				// launched by shortcut or as a file share intent
+			AutoRun autoRun = new AutoRun(this, FileName, false, null);
+			Intent intent = autoRun.load();								// load the program
 			DoAutoRun = true;
-			startActivity( intent );
+			startActivity(intent);										// run the program
 			finish();
 		} else if (AreSamplesLoaded()) {								// this is not a launcher short cut
 			DoAutoRun = false;
-			Intent intent = new Intent(BasicContext, Editor.class);
+			Intent intent = new Intent(this, Editor.class);
 			if (savedState != null) {									// if restarted by Editor
 				intent.putExtra(Editor.EXTRA_RESTART, savedState);		// send saved state back
 			}
 			startActivity(intent);										// to the Editor
 			finish();
 		} else {														// The sample files have not been loaded
-			runBackgroundLoader();							// Start the background task to load samples and graphics
+			runBackgroundLoader();							// Start the background thread to load samples and graphics
 		}
 	}
 
 	private void createForAPK() {										// Create code for APK
+		String ArgPath = "";
+		Intent myIntent = getIntent();    // Launched as a file share intent with an argument?
+		if (myIntent.getData() != null) ArgPath = myIntent.getData().getPath();
+		if (!ArgPath.equals("")) Run.called_with = getRelativePath(ArgPath, Basic.getDataPath(null));
 		runBackgroundLoader();
 	}
 
@@ -285,10 +360,9 @@ public class Basic extends Activity {
 
 		// Loading can take a while, so we have to start a background thread to do it.
 		// The background thread will make calls to the UI thread to show the progress.
-		// Once the files are loaded, the background task will start the loaded program running.
+		// Once the files are loaded, the Loader will start the loaded program running.
 
-		theBackground = new Background();						// Start the background task to load
-		theBackground.execute("");								// sample and graphics
+		(new Loader()).execute("");								// Start thread to load samples and graphics
 
 	}
 
@@ -326,10 +400,10 @@ public class Basic extends Activity {
 	}
 
 	public static void clearProgram() {
-
+		Run.running_bas = "";
 		lines = new ArrayList<Run.ProgramLine>();			// The lines array list is the program
 		lines.add(new Run.ProgramLine(""));					// add an empty string to lines
-		Editor.DisplayText="REM Start of BASIC! Program\n";	// Display text is the editors program storage for display
+		Editor.DisplayText = mDefaultFirstLine;				// Display text is the editors program storage for display
 	}
 
 	private static boolean AreSamplesLoaded() {		// Sample program files have not been loaded
@@ -347,7 +421,8 @@ public class Basic extends Activity {
 			if (f0.length() > 11) {					// f00_vnn_nn_xxx file
 				String[] f = f0.substring(5).split("_");
 				if (f.length > 1) {					// keep "0x.xx" of version number
-					String version = BasicContext.getString(R.string.version).substring(0,5);
+					Context appContext = mContextMgr.getContext(ContextManager.ACTIVITY_APP);
+					String version = appContext.getString(R.string.version).substring(0,5);
 					if (version.equals(f[0] + "." + f[1])) {	// Compare version numbers
 						return true;				// Versions match, correct files are loaded
 					}
@@ -373,15 +448,15 @@ public class Basic extends Activity {
 		// Earth.jpg = earth
 
 		if (input == null) return "";
-		String output = input.toLowerCase();		// Convert to lower case
-		int index = output.indexOf(".");			// Find the dot
-		if (index == -1) return output;				// if no dot, return as is
-		return output.substring(0, index);			// else isolate stuff in front of dot
+		String output = input.toLowerCase(Locale.getDefault());	// Convert to lower case
+		int index = output.indexOf(".");						// Find the dot
+		if (index == -1) return output;							// if no dot, return as is
+		return output.substring(0, index);						// else isolate stuff in front of dot
 	}
 
 	public static String getAlternateRawFileName(String input) {
 		// Converts a file name with upper and lower case characters to a lower case filename.
-		// The dot extension is appended to the end of the filename preceeded by "_".
+		// The dot extension is appended to the end of the filename preceded by "_".
 		// Any other dots in the file are also converted to "_".
 
 		// MyFile.png = myfile_png
@@ -391,21 +466,23 @@ public class Basic extends Activity {
 
 		// if there is no dot extension, returns original string
 
+		Locale locale = Locale.getDefault();
 		int idx = input.lastIndexOf("/");
-		return idx >= 0 ? input.substring(idx + 1).toLowerCase().replace(".", "_") : input.toLowerCase().replace(".", "_"); // Convert to lower case, convert all '.' to '_'
+		return idx >= 0 ? input.substring(idx + 1).toLowerCase(locale).replace(".", "_")
+						: input.toLowerCase(locale).replace(".", "_");	// Convert to lower case, convert all '.' to '_'
 	}
 
 	public static int getRawResourceID(String fileName) {
 		if (fileName == null) fileName = "";
-		String packageName = BasicContext.getPackageName();				// Get the package name
 		int resID = 0;													// 0 is not a valid resource ID
 		for (int attempt = 1; (resID == 0) && (attempt <= 2); ++attempt) {
 			String rawFileName =
 				(attempt == 1) ? getAlternateRawFileName(fileName) :	// Convert conventional filename to raw resource name, BASIC!-style
 				(attempt == 2) ? getRawFileName(fileName) : "";			// If first try didn't work, try again, Android-style.
 			if (!rawFileName.equals("")) {
-				Resources res = BasicContext.getResources();
-				String fullName = packageName + ":raw/" + rawFileName;	// "fully-qualified resource name"
+				Context appContext = mContextMgr.getContext(ContextManager.ACTIVITY_APP);
+				Resources res = appContext.getResources();
+				String fullName = mBasicPackage + ":raw/" + rawFileName;// "fully-qualified resource name"
 				resID = res.getIdentifier(fullName, null, null);		// Get the resource ID
 			}
 		}
@@ -413,13 +490,14 @@ public class Basic extends Activity {
 	}
 
 	public static InputStream streamFromResource(String dir, String path) throws Exception {
+		Context appContext = mContextMgr.getContext(ContextManager.ACTIVITY_APP);
 		InputStream inputStream = null;
 		int resID = getRawResourceID(path);
 		if (resID != 0) {
-			Resources res = BasicContext.getResources();				// open an input stream from raw resource
+			Resources res = appContext.getResources();					// open an input stream from raw resource
 			inputStream = res.openRawResource(resID);					// this call may throw NotFoundException
 		} else {
-			inputStream = BasicContext.getAssets().						// open an input stream from an asset
+			inputStream = appContext.getAssets().						// open an input stream from an asset
 							open(getAppFilePath(dir, path));			// this call may throw IOException
 		}
 		return inputStream;
@@ -434,7 +512,8 @@ public class Basic extends Activity {
 		} else if (isAPK) {
 			InputStream inputStream = streamFromResource(dir, path);
 			if (inputStream != null) {
-				Resources res = BasicContext.getResources();
+				Context appContext = mContextMgr.getContext(ContextManager.ACTIVITY_APP);
+				Resources res = appContext.getResources();
 				if (enableDecryption & res.getBoolean(R.bool.apk_programs_encrypted)) {
 					inputStream = getDecryptedStream(inputStream);
 				}
@@ -459,9 +538,81 @@ public class Basic extends Activity {
 
 	public static InputStream getDecryptedStream(InputStream inputStream) throws Exception {
 		// Decrypt program that was encrypted with PBEWithMD5AndDES
-		String PW = BasicContext.getPackageName();
+		String PW = mBasicPackage;
 		Cipher cipher = new Basic.Encryption(Cipher.DECRYPT_MODE, PW).cipher();
 		return new CipherInputStream(inputStream, cipher);
+	}
+
+	/**
+	 * Get the relative path from one file to another.
+	 * If one of the provided resources does not exist,
+	 * it is assumed to be a file unless it ends with '/'.
+	 */
+	public static String getRelativePath(String targetPath, String basePath) {
+
+      // Normalize the paths and split on File separator
+      String normalizedTargetPath = targetPath;
+      String normalizedBasePath = basePath;
+      try {
+        normalizedTargetPath = new File(targetPath).getCanonicalPath().replaceAll("/$", "");
+        normalizedBasePath = new File(basePath).getCanonicalPath().replaceAll("/$", "");
+      }
+      catch (IOException e) { Log.w(LOGTAG, "getRelativePath - getCanonicalPath: " + e); }
+      String[] base = normalizedBasePath.split(Pattern.quote("/"));
+      String[] target = normalizedTargetPath.split(Pattern.quote("/"));
+
+      // First get all the common elements. Store them as a string,
+      // and also count how many of them there are.
+      StringBuilder common = new StringBuilder();
+      int commonIndex = 0;
+      while (commonIndex < target.length && commonIndex < base.length
+              && target[commonIndex].equals(base[commonIndex])) {
+          common.append(target[commonIndex] + "/");
+          commonIndex++;
+      }
+
+      if (commonIndex == 0) {
+          // No single common path element. This most likely indicates differing drives.
+          // These paths cannot be relativized.
+          return targetPath;
+      }
+
+      // The number of directories we have to backtrack depends on whether the base is a file or a dir.
+      // For example, the relative path from /foo/bar/baz/gg/ff to /foo/bar/baz will produce:
+      // ".." if ff is a file
+      // "../.." if ff is a directory
+
+      // The following is a heuristic to figure out if the base refers to a file or dir.
+      boolean baseIsFile = true;
+      File baseResource = new File(normalizedBasePath);
+      if (baseResource.exists()) {
+          baseIsFile = baseResource.isFile();
+      } else if (basePath.endsWith("/")) {
+          baseIsFile = false;
+      }
+
+      StringBuilder relative = new StringBuilder();
+      if (base.length != commonIndex) {
+          int numDirsUp = baseIsFile ? base.length - commonIndex - 1 : base.length - commonIndex;
+          for (int i = 0; i < numDirsUp; i++) {
+              relative.append("../");
+          }
+      }
+
+		/* v1.91 fix v1.90.02 bug:
+		 * If you rotate the device while running the Editor,
+		 * this method is called, and:
+		 *   normalizedTargetPath and normalizedBasePath are the same
+		 *   common is <either normalized path> + "/"
+		 * So common.length() is one more than normalizedTargetPath.length()
+		 * and the substring() call crashes.
+		 * In this case you want to append nothing (empty substring), so I wrapped
+		 * the append in a length test. Works, but it's a hack. TODO: fix it right.
+		 */
+		if (normalizedTargetPath.length() > common.length() ) {
+			relative.append(normalizedTargetPath.substring(common.length()));
+		}
+		return relative.toString();
 	}
 
 	public static int loadProgramFileToList(boolean isFullPath, String path, ArrayList<String> list) {
@@ -477,6 +628,9 @@ public class Basic extends Activity {
 		String dir = isFullPath ? null : Basic.SOURCE_DIR;
 		try { buf = getBufferedReader(dir, path, Basic.Encryption.ENABLE_DECRYPTION); }
 		catch (Exception e) { return size; }
+
+		// Save running bas path after making it relative to rfo-basic/source
+		Run.running_bas = getRelativePath(isFullPath ? path : Basic.getSourcePath(path), Basic.getSourcePath(null));
 
 		// Read the file. Insert the the lines into the ArrayList.
 		String data = null;
@@ -537,7 +691,7 @@ public class Basic extends Activity {
 				out.flush();
 				out.close();
 			} catch (IOException e) {
-				//Log.v(LOGTAG, CLASSTAG + " I/O Exception 4");
+				//Log.v(LOGTAG, "I/O Exception 4");
 				if (ex == null) { ex = e; }
 			}
 		}
@@ -555,7 +709,7 @@ public class Basic extends Activity {
 				out.flush();
 				out.close();
 			} catch (IOException e) {
-				//Log.v(LOGTAG, CLASSTAG + " I/O Exception 4");
+				//Log.v(LOGTAG, "I/O Exception 4");
 				if (ex == null) { ex = e; }
 			}
 		}
@@ -564,10 +718,10 @@ public class Basic extends Activity {
 
 	/************************************* background loader *************************************/
 
-	// The loading of the sample files and graphics is done in a background AsyncTask rather than the UI task
-	// Progress is shown by sending progress messages to the UI task.
+	// The loading of the sample files and graphics is done in a background AsyncTask rather than the UI thread.
+	// Progress is shown by sending progress messages to the UI thread.
 
-	public class Background extends AsyncTask<String, String, String>{
+	public class Loader extends AsyncTask<String, String, String>{
 
 		private String mProgressMarker;						// Displayed as a unit of progress while files are loading
 		private boolean mDisplayProgress;
@@ -577,7 +731,7 @@ public class Basic extends Activity {
 
 		@Override
 		protected void onPreExecute() {
-			mRes = BasicContext.getResources();
+			mRes = Basic.this.getResources();
 			String[] loadingMsg = mRes.getStringArray(R.array.loading_msg);	// Displayed while files are loading
 			mProgressMarker = mRes.getString(R.string.progress_marker);
 			mDisplayProgress = (loadingMsg != null) && (loadingMsg.length != 0);
@@ -633,7 +787,6 @@ public class Basic extends Activity {
 		}
 
 		private Intent doBGforSB() {								// Background code for Standard Basic
-			SD_ProgramPath = SAMPLES_DIR;						// This setting will also force LoadFile to show the samples directory
 			if (new File(getFilePath()).exists()) {
 				copyAssets(AppPath);
 				doFirstLoad();									// First load shows a first load basic program
@@ -641,20 +794,31 @@ public class Basic extends Activity {
 				doCantLoad();									// Can't load: show an error message
 			}
 			DoAutoRun = false;
-			return new Intent(BasicContext, Editor.class);		// Goto the Editor
+			Intent intent = new Intent(Basic.this, Editor.class);
+			// This LOADPATH setting will also force LoadFile to show the samples directory
+			intent.putExtra(Editor.EXTRA_LOADPATH, SAMPLES_DIR);// start in Sample_Programs
+			return intent;										// go to the Editor
 		}
 
 		private Intent doBGforAPK() {								// Background code of APK
+			long startTime = System.currentTimeMillis();		// for splash screen timing
 			InitDirs();											// Initialize Basic directories every time
 			LoadGraphicsForAPK();								// Load the sound and graphics files
 
 			lines = new ArrayList<Run.ProgramLine>();			// Program will be loaded into this array list
 			LoadTheProgram();									// Load the basic program into memory
 
-			theProgramRunner = new Intent(BasicContext, Run.class);	// now go run the program
-			theRunContext = null;
+			if (mRes.getBoolean(R.bool.splash_display)) {		// if displaying splash screen, enforce minimum duration
+				// This code was provided by forum user Luca_G, posted 2015/06/02.
+				int splashTime = mRes.getInteger(R.integer.splash_time);
+				int delay = splashTime - (int)(System.currentTimeMillis() - startTime);
+				if (delay > 1) {
+					try { Thread.sleep(delay); }
+					catch (InterruptedException ex) { Thread.currentThread().interrupt(); }
+				}
+			}
 			DoAutoRun = true;
-			return theProgramRunner;							// Go run the program
+			return new Intent(Basic.this, Run.class);			// Go run the program
 		}
 
 		private void copyAssets(String path) {	// Recursively copy all the assets in the named subdirectory to the SDCard
@@ -776,45 +940,25 @@ public class Basic extends Activity {
 			// The first load is a short program of comments that will be displayed
 			// by the Editor
 
-			Editor.DisplayText = "!!\n\n" +			// Initialize the Display Program Lines
-					"Welcome to BASIC!\n\n" +
-					"Press Menu->More->About\n" +
-					"to get more information\n" +
-					"about this release, and\n" +
-					"to see the User's Manual,\n" +
-					"De Re BASIC!\n\n" +
-					"Press Menu->Clear to clear\n" +
-					"this message and start\n" +
-					"writing your own BASIC!\n" +
-					"program.\n\n";
+			String initialInfoText = getString(R.string.display_text_initial_info);
+			String initialInfoAddendum = getString(R.string.display_text_addendum_dont_keep);
+			String openComment = getString(R.string.display_text_open_comment);
+			String closeComment = getString(R.string.display_text_close_comment);
+
 			int level = Build.VERSION.SDK_INT;
-			if (level >= 11) {
-				Editor.DisplayText +=
-					"Note: if you can't load a\n" +
-					"program, check your settings.\n" +
-					"\"Developer Options ->\n" +
-					"Don't keep activities\"\n" +
-					"must NOT be checked.\n\n";
-			}
-			Editor.DisplayText += 
-					"!!";
+			Editor.DisplayText = openComment +				// Initialize the Display Program Lines
+								 initialInfoText +
+								 ((level >= 11) ? initialInfoAddendum : "") +
+								 closeComment;
 		}
 
 		public void doCantLoad() {
 			// A short program of comments that will be displayed
 			// by the Editor to indicate the Base Drive is not writable
 
-			Editor.DisplayText="!!\n\n" +
-					"BASIC! is unable to write\n" +
-					"its sample programs.\n" +
-					"You can write and run\n" +
-					"programs, but you cannot\n" +
-					"save them. You can press\n" +
-					"Menu->More->Preferences\n" +
-					"and select \"Base Drive\"\n" +
-					"to change the setting\n" +
-					"to writable storage.\n\n" +
-					"!!";
+			Editor.DisplayText = getString(R.string.display_text_open_comment) +
+								 getString(R.string.display_text_cant_load) +
+								 getString(R.string.display_text_close_comment);
 		}
 
 		private void LoadTheProgram() {
@@ -855,7 +999,7 @@ public class Basic extends Activity {
 				}
 			}
 		}
-	} // class Background
+	} // class Loader
 
 	/************************************** utility classes **************************************/
 
@@ -889,15 +1033,16 @@ public class Basic extends Activity {
 		}
 
 		public void refresh() {									// set fields from setup.xml values and Preferences settings
-			getScreenColors();
-			mSize = Settings.getFont(BasicContext);
-			mTypeface = Settings.getConsoleTypeface(BasicContext);
+			Context appContext = mContextMgr.getContext(ContextManager.ACTIVITY_APP);
+			getScreenColors(appContext);
+			mSize = Settings.getFont(appContext);
+			mTypeface = Settings.getConsoleTypeface(appContext);
 		}
 
-		public boolean getCustomColors(int[] colors) {
-			boolean useCustom = Settings.useCustomColors(BasicContext);
+		public boolean getCustomColors(Context appContext, int[] colors) {
+			boolean useCustom = Settings.useCustomColors(appContext);
 			if (useCustom) {
-				String[] prefs = Settings.getCustomColors(BasicContext);
+				String[] prefs = Settings.getCustomColors(appContext);
 				for (int i = 0; i < 4; ++i) {
 					String pref = prefs[i].trim().replace("0x", "#");
 					if (!pref.contains("#")) pref = "#" + pref;
@@ -911,23 +1056,23 @@ public class Basic extends Activity {
 			return useCustom;
 		}
 
-		public void getScreenColors() {
+		public void getScreenColors(Context appContext) {
 			int[] colors = new int[4];
 
 			// The programmer may define the colors in res/values/setup.xml.
-			Resources res = BasicContext.getResources();
+			Resources res = appContext.getResources();
 			colors[0] = res.getInteger(R.integer.color1);		// default is solid black
 			colors[1] = res.getInteger(R.integer.color2);		// default is solid white
 			colors[2] = res.getInteger(R.integer.color3);		// default is blue Paul chose for "WBL"
 			colors[3] = res.getInteger(R.integer.color4);		// default is green, same in all schemes
 
 			// The user may change the colors in Preferences.
-			if (getCustomColors(colors)) {
+			if (getCustomColors(appContext, colors)) {
 				mTextColor = colors[1];
 				mBackgroundColor = colors[2];
 				mLineColor = colors[0];
 			} else {
-				String colorSetting = Settings.getColorScheme(BasicContext);
+				String colorSetting = Settings.getColorScheme(appContext);
 				if (colorSetting.equals("BW")) {
 					mTextColor = colors[0];
 					mBackgroundColor = colors[1];
@@ -990,11 +1135,12 @@ public class Basic extends Activity {
 		}
 	} // class ColoredTextAdapter
 
-	public static void toaster(Context context, CharSequence msg) {		// Tell the user "msg" via Toast
-		if ((context == null) || (msg == null) || msg.equals("")) return;
+	public static Toast toaster(Context context, CharSequence msg) {	// Tell the user "msg" via Toast
+		if ((context == null) || (msg == null) || msg.equals("")) return null;
 		Toast toast = Toast.makeText(context, msg, Toast.LENGTH_SHORT);
 		toast.setGravity(Gravity.TOP|Gravity.CENTER, 0, 50);			// default: short, high toast
 		toast.show();
+		return toast;
 	}
 
 	public static class Encryption {

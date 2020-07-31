@@ -4,7 +4,7 @@
  Android devices.
 
 
- Copyright (C) 2010 - 2015 Paul Laughton
+ Copyright (C) 2010 - 2019 Paul Laughton
 
  This file is part of BASIC! for Android
 
@@ -30,8 +30,9 @@ package com.rfo.basic;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 
-import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -41,7 +42,6 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputFilter;
@@ -53,7 +53,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Scroller;
 import android.widget.Toast;
@@ -61,27 +60,43 @@ import android.widget.Toast;
 
 public class Editor extends Activity {
 	private static final String LOGTAG = "Editor";
-	private static final String CLASSTAG = Editor.class.getSimpleName();
 
 	// Things to save and restore if the system kills us.
+	private static final String STATE_PROGRAM_PATH = "programPath";
 	private static final String STATE_PROGRAM_FILE_NAME = "programFileName";
 	private static final String STATE_INITIAL_SIZE = "initialSize";
 	private static final String STATE_SAVED = "isSaved";
 	private static final String STATE_ERROR_DISPLACEMENT = "errorDisplacement";
 	private static final String STATE_MTEXT_DATA = "theText";
 	public static final String EXTRA_RESTART = "com.rfo.basic.doRestart";
+	public static final String EXTRA_LOADPATH = "com.rfo.basic.initLoadPath";
 
-	public static final int LOAD_FILE_INTENT = 1;
+	// Since Android 4.2, "external storage" may be emulated and the path may included the user id.
+	// There is another path that uses "legacy" instead of the user id.
+	// E.g., getExternalStorageDirectory() may return /storage/emulated/0",
+	// but then the "/sdcard link would resolve to "/storage/emulated/legacy".
+	// The default basePath and filePath come from getExternalStorageDirectory().
+	// For comparisons with other canonical paths we need the "legacy" version.
+	// mAltHomePath and mAltBasePath, if non-null, use the "legacy" paths.
+
+	private static String mBasePathAndSep;				// canonical base path (WITH trailing separator)
+	private static String mAltBasePathAndSep;			// if non-null, this is mBasePath with "legacy"
+	private static String mHomePath;					// canonical base path + app path (NO trailing separator)
+	private static String mAltHomePath;					// if non-null, this is mHomePath with "legacy"
+	public static String ProgramPath;					// canonical path to ProgramFileName used by LOAD/SAVE
+	public static String ProgramFileName;				// set when program loaded or saved
+	public static final String SEPARATOR = "" + File.separatorChar; // '/' in a String
+	public static final String DIR_MARK = "(d)";		// marker that indicates a file name refers to a directory
+	public static final String GO_UP = "..";			// "file name" that means move up the directory tree (toward root)
+
+	private static final int LOAD_FILE_INTENT = 1;
 
 	public static LinedEditText mText;					// The Editors display text buffers
-	public static String ProgramFileName;				// Set when program loaded or saved
-
-	public static String DisplayText = "REM Start of BASIC! Program\n";
+	public static String DisplayText = Basic.mDefaultFirstLine;
 	public static int SyntaxErrorDisplacement = -1;
 
 	public static int selectionStart;
 	public static int selectionEnd;
-	public static final String Name = "BASIC! Program Editor - ";
 	public static int InitialProgramSize;				// Used to determine if program has changed
 	public static boolean Saved = true;
 
@@ -253,13 +268,13 @@ public class Editor extends Activity {
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-		Log.d(LOGTAG, CLASSTAG + ".onCreate");
+		Log.d(LOGTAG, "onCreate");
 		super.onCreate(savedInstanceState);						// Setup and the display the text to be edited
 
 		mSavedInstanceState = savedInstanceState;				// preserve for onResume
+		Intent intent = getIntent();
 		if (savedInstanceState == null) {						// if no state from system
-			Intent intent = getIntent();						// look for state from Basic Activity
-			mSavedInstanceState = intent.getBundleExtra(EXTRA_RESTART);
+			mSavedInstanceState = intent.getBundleExtra(EXTRA_RESTART); // look for state from Basic Activity
 		}
 		Run.Exit = false; 										// Clear this in case it was set last time BASIC! exited.
 
@@ -271,7 +286,30 @@ public class Editor extends Activity {
 		 * When that is done, the rest of the code here will be execute.
 		 */
 		setContentView(R.layout.editor);
-		ProgramFileName = "unnamed program";
+
+		mHomePath = Basic.getFilePath();
+		mBasePathAndSep = new File(mHomePath).getParent() + SEPARATOR;
+		mAltHomePath = mAltBasePathAndSep = null;
+
+		File base = new File(mBasePathAndSep);
+		File sdBase = new File(SEPARATOR + "sdcard");
+		try { sdBase = sdBase.getCanonicalFile(); }
+		catch (IOException ex) { }
+		if (sdBase.getName().equals("legacy")) {				// if /sdcard points to legacy
+			base = new File(base.getParent(), "legacy");		// replace base leaf with "legacy"
+			if (sdBase.getPath().equals(base.getPath()) &&
+					base.exists() && sdBase.exists()) {
+				// We're as sure as we can be that base and sdBase are the same.
+				mAltBasePathAndSep = sdBase.getPath() + SEPARATOR;
+				mAltHomePath = new File(sdBase, Basic.AppPath).getPath();
+			}
+		}
+
+		String initLoadPath = intent.getStringExtra(EXTRA_LOADPATH);
+		if (initLoadPath == null) { initLoadPath = ""; }
+		// These two fields may be overwritten from mSavedInstanceState in onResume().
+		ProgramPath = Basic.getSourcePath(initLoadPath);
+		ProgramFileName = "";
 
 		mText = (LinedEditText)findViewById(R.id.basic_text);	// mText is the TextView Object
 		mText.setTypeface(Typeface.MONOSPACE);
@@ -349,14 +387,14 @@ public class Editor extends Activity {
 
 
 		return super.onKeyUp(keyCode, event);
-	}
+	} // onKeyUp
 
 	@Override
 	protected void onResume() {
 		super.onResume();
 
-		if (Basic.BasicContext == null) {						// if we have lost context then restart Basic Activity
-			Log.e(LOGTAG, CLASSTAG + ".onCreate: lost Context. Restarting BASIC!.");
+		if (Basic.getContextManager() == null) {				// if we have lost context then restart Basic Activity
+			Log.e(LOGTAG, "onCreate: lost Context. Restarting BASIC!.");
 			Intent intent = new Intent(getApplicationContext(), Basic.class);
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 			if (mSavedInstanceState != null) {					// send saved state so Basic can send it back
@@ -369,9 +407,12 @@ public class Editor extends Activity {
 		}
 
 		if (mSavedInstanceState != null) {
-			Log.d(LOGTAG, CLASSTAG + ".onResume: found savedInstanceState");
+			Log.d(LOGTAG, "onResume: found savedInstanceState");
+			ProgramPath = mSavedInstanceState.getString(STATE_PROGRAM_PATH);
+			Run.running_bas = Basic.getRelativePath(ProgramPath, Basic.getSourcePath(null));
 			ProgramFileName = mSavedInstanceState.getString(STATE_PROGRAM_FILE_NAME);
-			mText.setText(mSavedInstanceState.getString(STATE_MTEXT_DATA));
+			String text = mSavedInstanceState.getString(STATE_MTEXT_DATA);
+			if (text != null) { mText.setText(text); }
 			InitialProgramSize = mSavedInstanceState.getInt(STATE_INITIAL_SIZE);
 			SyntaxErrorDisplacement = mSavedInstanceState.getInt(STATE_ERROR_DISPLACEMENT);
 			Saved = mSavedInstanceState.getBoolean(STATE_SAVED);
@@ -388,15 +429,11 @@ public class Editor extends Activity {
 		}
 
 		if (Basic.DoAutoRun) {
-			Log.e(LOGTAG, CLASSTAG + ".onResume: AutoRun is set. Shutting down.");
+			Log.e(LOGTAG, "onResume: AutoRun is set. Shutting down.");
 			finish();
 		} else {
-			setTitle(Name + ProgramFileName);
-
-			if (mMenu != null) {
-				menuItemsToActionBar(mMenu);
-				onPrepareOptionsMenu(mMenu);
-			}
+			setTitle(ProgramFileName);
+			menuItemsToActionBar(mMenu);
 
 			mText.getPreferences(this);
 			int SO = Settings.getSreenOrientation(this);
@@ -426,11 +463,19 @@ public class Editor extends Activity {
 				SyntaxErrorDisplacement = -1;								// Reset the value
 			}
 		}
+	} // onResume
 
+	@Override
+	public void setTitle(CharSequence programName) {
+		CharSequence title = getString(R.string.editor_name) + " - " +
+							 (((programName != null) && !programName.equals(""))
+									 ? programName : getString(R.string.unnamed_program));
+		super.setTitle(title);
 	}
 
 	@Override
 	public void onSaveInstanceState(Bundle savedInstanceState) {
+		savedInstanceState.putString(STATE_PROGRAM_PATH, ProgramPath);
 		savedInstanceState.putString(STATE_PROGRAM_FILE_NAME, ProgramFileName);
 		savedInstanceState.putInt(STATE_INITIAL_SIZE, InitialProgramSize);
 		savedInstanceState.putBoolean(STATE_SAVED, Saved);
@@ -450,62 +495,46 @@ public class Editor extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		Log.v(LOGTAG, CLASSTAG + " onPause");
+		Log.v(LOGTAG, "onPause");
 	}
 
 	@Override
 	protected void onStart() {
 		super.onStart();
-		Log.v(LOGTAG, CLASSTAG + " onStart");
+		Log.v(LOGTAG, "onStart");
 	}
 
 	@Override
 	protected void onRestart() {
 		super.onRestart();
-		Log.v(LOGTAG, CLASSTAG + " onRestart");
+		Log.v(LOGTAG, "onRestart");
 	}
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		Log.v(LOGTAG, CLASSTAG + " onDestroy");
+		Log.v(LOGTAG, "onDestroy");
 	}
 */
+
+	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+	private void menuItemsToActionBar(Menu menu) {
+		if (menu == null) return;
+		if (Build.VERSION.SDK_INT < 11) return;				// no action needed
+
+		if (Settings.menuItemsToActionBar(this, menu)) {
+			invalidateOptionsMenu();
+		}
+	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {			// When the user presses Menu
 		super.onCreateOptionsMenu(menu);					// set up and display the Menu
 		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.main, menu);
+		inflater.inflate(R.menu.editor, menu);
 		mMenu = menu;
-		menuItemsToActionBar(menu);
+		Settings.menuItemsToActionBar(this, menu);
 		return true;
-	}
-
-	@SuppressLint({ "NewApi", "InlinedApi" })
-	private void menuItemsToActionBar(Menu menu) {
-		if (menu == null) return;
-		if (Build.VERSION.SDK_INT < 11) return;
-
-		MenuItem item = menu.findItem(R.id.run);
-		int action = Settings.getEditorRunOnActionBar(this)
-				? MenuItem.SHOW_AS_ACTION_IF_ROOM : MenuItem.SHOW_AS_ACTION_NEVER;
-		item.setShowAsAction(action);
-
-		item = menu.findItem(R.id.load);
-		action = Settings.getEditorLoadOnActionBar(this)
-				? MenuItem.SHOW_AS_ACTION_IF_ROOM : MenuItem.SHOW_AS_ACTION_NEVER;
-		item.setShowAsAction(action);
-
-		item = menu.findItem(R.id.save);
-		action = Settings.getEditorSaveOnActionBar(this)
-				? MenuItem.SHOW_AS_ACTION_IF_ROOM : MenuItem.SHOW_AS_ACTION_NEVER;
-		item.setShowAsAction(action);
-
-		item = menu.findItem(R.id.exit);
-		action = Settings.getEditorExitOnActionBar(this)
-				? MenuItem.SHOW_AS_ACTION_IF_ROOM : MenuItem.SHOW_AS_ACTION_NEVER;
-		item.setShowAsAction(action);
 	}
 
 	@Override
@@ -559,14 +588,12 @@ public class Editor extends Activity {
 				return true;
 
 			case R.id.save_run:								// SAVE and RUN
-				String fname = ProgramFileName;
 				if (Saved) {
 					Run();									// no change, just run the program
-				} else if (fname.equals("")) {				// if no file name...
+				} else if (ProgramFileName.equals("")) {	// if no file name...
 					askNameSaveFile(Action.RUN);			// ... get a name, save the program and run it
 				} else {									// else have a file name
-					writeTheFile(ProgramFileName);	// save the program, overwriting existing file
-					// Basic.toaster(this, "Saved " + fname);
+					writeTheFile(ProgramFileName);			// save the program, overwriting existing file
 					Run();									// run the program
 				}
 				return true;
@@ -599,16 +626,11 @@ public class Editor extends Activity {
 				return true;
 
 			case R.id.help:									// COMMANDS
-				startActivity(new Intent(this, Help.class));	// Start the help activity
+				startActivity(new Intent(this, Help.class));	// Start the Help activity
 				return true;
 
 			case R.id.about:								// ABOUT
-				String version = getString(R.string.version);	// Get the version string
-				String url = "https://bintray.com/rfo-basic/android/RFO-BASIC/v"	// add it to the URL
-							+ version + "/view/read";
-				Intent i = new Intent(Intent.ACTION_VIEW);		// Go to the About web page
-				i.setData(Uri.parse(url));
-				startActivity(i);
+				startActivity(new Intent(this, About.class));	// Start the About activity
 				return true;
 
 			case R.id.exit:									// EXIT
@@ -626,16 +648,18 @@ public class Editor extends Activity {
 
 	private void doSaveDialog(final Action afterSave) {
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
-		alert.setMessage("Current Program Not Saved!")
+		alert.setMessage(getString(R.string.Current_Program_Not_Saved))
 			.setCancelable(true)										// Allow user to BACK key out of the dialog
 
-			.setPositiveButton("Save", new DialogInterface.OnClickListener() {		// User says to save first
+			.setPositiveButton(getString(R.string.save),
+							   new DialogInterface.OnClickListener() {	// User says to save first
 				public void onClick(DialogInterface dialog, int id) {
 					askNameSaveFile(afterSave);							// Tell the saver what to do after the save is done
 				}
 			})
 
-			.setNegativeButton("Continue", new DialogInterface.OnClickListener() {	// User says Do not save
+			.setNegativeButton(getString(R.string.Continue),
+							   new DialogInterface.OnClickListener() {	// User says Do not save
 				public void onClick(DialogInterface dialog, int id) {
 					doAfterSave(afterSave);								// Finish what the Save dialog interrupted
 				}
@@ -653,10 +677,11 @@ public class Editor extends Activity {
 
 	private void doFormatDialog() {
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
-		alert.setMessage("Format your program?")
+		alert.setMessage(getString(R.string.Format_your_program))
 			.setCancelable(true)
 
-			.setPositiveButton("Format", new DialogInterface.OnClickListener() {	// User says to do the format
+			.setPositiveButton(getString(R.string.format),
+							   new DialogInterface.OnClickListener() {	// User says to do the format
 				public void onClick(DialogInterface dialog, int id) {
 					DisplayText = mText.getText().toString();
 					startActivity(new Intent(Editor.this, Format.class));			// Start the format activity
@@ -664,7 +689,8 @@ public class Editor extends Activity {
 				}
 			})
 
-			.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {	// User says to cancel
+			.setNegativeButton(getString(R.string.cancel_button_label),
+							   new DialogInterface.OnClickListener() {	// User says to cancel
 				public void onClick(DialogInterface dialog, int id) {
 					return;
 				}
@@ -697,11 +723,8 @@ public class Editor extends Activity {
 			Basic.lines.add(new Run.ProgramLine("@@@"));		// add Nothing to run command
 		}
 
-		Basic.theProgramRunner = new Intent(this, Run.class);	// now go run the program
-		Basic.theRunContext = null;								// Run will set theRunContext to non-null value
 		SyntaxErrorDisplacement = -1;
-
-		startActivity(Basic.theProgramRunner);
+		startActivity(new Intent(this, Run.class));				// now go run the program
 	}
 
 	private void loadFile(boolean doRun) {
@@ -716,102 +739,115 @@ public class Editor extends Activity {
 	}
 
 	private void clearProgram() {
-		Basic.clearProgram();						// then do the clear
+		Basic.clearProgram();									// then do the clear
 		ProgramFileName = "";
-		setTitle(Name + ProgramFileName);
+		setTitle(ProgramFileName);
+		Saved = true;
+		InitialProgramSize = DisplayText.length();
 		mText.setText(DisplayText);
 	}
 
 	private void askNameSaveFile(final Action afterSave) {
 
-		final AlertDialog.Builder alert = new AlertDialog.Builder(this);		// Get the filename from user
+		final AlertDialog.Builder alert = new AlertDialog.Builder(this);	// get the filename from user
 		final EditText input = new EditText(this);
-		input.setText(ProgramFileName);									// If the program has a name
-		// put it in the dialog box
+		input.setText(ProgramFileName);										// if the program has a name put it in the dialog box
 		alert.setView(input);
-		alert.setCancelable(true);										// Allow the dialog to be canceled
-		alert.setTitle("Save As..");
+		alert.setCancelable(true);											// allow the dialog to be canceled
+
+		String path = getDisplayPath(ProgramPath);							// get the save path to display in the dialog box
+		if (path.endsWith(Basic.SAMPLES_DIR)) { path = goUp(path); }		// don't offer to save in sample programs directory
+		alert.setTitle(getString(R.string.Save_to_FILENAMEARG, path));
 		alert.setOnCancelListener(new DialogInterface.OnCancelListener() {
-				public void onCancel(DialogInterface arg0) {			// User has canceled save
-					return;												// done
-				}
-			});
+			public void onCancel(DialogInterface arg0) {					// user has canceled save
+				return;														// done
+			}
+		});
 
-		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {	//Have a filename
-				public void onClick(DialogInterface dialog, int whichButton) {
-					String theFilename = input.getText().toString().trim();
-
-					Basic.clearProgram();									// Clear Basic.lines
-					Basic.lines.remove(0);									// including that REM statement
-					DisplayText = mText.getText().toString();				// get the text being displayed
-					String Temp1 = "";
-					boolean LineAdded = false;
-					for (int k = 0; k < DisplayText.length(); ++k) {		// Move the display text to Basic.lines
-						if (DisplayText.charAt(k) == '\n') {
-							Basic.lines.add(new Run.ProgramLine(Temp1));
-							Temp1 = "";
-							LineAdded = true;
-						} else {
-							Temp1 += DisplayText.charAt(k);
-							LineAdded = false;
-						}
-					}
-					if (!LineAdded) {										// Special case for line
-						Basic.lines.add(new Run.ProgramLine(Temp1));		// without \n
-					}
-
-					writeTheFile(theFilename);								// Now go write the file
-					doAfterSave(afterSave);									// and finish what was interrupted by Save dialog
-				}});
+		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {// have a filename
+			public void onClick(DialogInterface dialog, int whichButton) {
+				String theFilename = input.getText().toString().trim();
+				writeTheFile(theFilename);									// write the program to a file
+				doAfterSave(afterSave);										// and finish what was interrupted by Save dialog
+			}});
 
 		alert.show();
 	}
 
-	private void writeTheFile(String theFileName) {
-
-		String DirPart = "";
-		int k = theFileName.lastIndexOf('/');						// does name contain a path separator?
-		if (k >= 0) {
-			if (k > 0) {											// form "path/file"
-				DirPart = theFileName.substring(0, k);				// DirPart does not include the separator
+	private ArrayList<String> captureProgram() {
+		ArrayList<String> lines = new ArrayList<String>();
+		DisplayText = mText.getText().toString();				// get the text being displayed
+		String line = "";
+		boolean LineAdded = false;
+		for (int k = 0; k < DisplayText.length(); ++k) {		// move the display text to a String array
+			if (DisplayText.charAt(k) == '\n') {
+				lines.add(line);
+				line = "";
+				LineAdded = true;
+			} else {
+				line += DisplayText.charAt(k);
+				LineAdded = false;
 			}
-			theFileName = theFileName.substring(k + 1);				// the filename is the part after the last separator
 		}
-		if (theFileName.length() == 0) {							// if no file name
-			theFileName = "default.bas";							// use the default
-		} else if (!theFileName.endsWith(".bas")) {					// if the filename does not
-			theFileName += ".bas";									// have the .bas extension
-		}															// then add it
-		// now we can start the write process
+		if (!LineAdded) {										// Special case for line
+			lines.add(line);									// without \n
+		}
+		return lines;
+	}
 
+	private void writeTheFile(String fileName) {
 		// First ensure the SD Card is available and writable
 		if (!Basic.checkSDCARD('w')) {								// If can't use SD card, pop up some
 			Basic.toaster(this, "External Storage not available or not writeable.");	// toast
 			return;
 		}
 
-		// Write to SD Card
-		String path = DirPart;
-		boolean success = false;
-		if (Basic.SD_ProgramPath.equals("Sample_Programs") || Basic.SD_ProgramPath.equals("/Sample_Programs")) {
-			Basic.SD_ProgramPath = "";
+		String seps = "^" + File.separatorChar + "+";				// regex for leading slashes
+		fileName = fileName.replaceFirst(seps, "");					// remove leading slashes
+		String path = "";
+		int k = fileName.lastIndexOf(File.separatorChar);			// does name contain a path separator?
+		if (k > 0) {												// form is "path/file"
+			path = fileName.substring(0, k);						// path is part before last separator
+			fileName = fileName.substring(k + 1);					// the filename is the part after the last separator
 		}
-		File sdDir = new File(Basic.getSourcePath(Basic.SD_ProgramPath));
+		if (fileName.length() == 0) {								// if no file name
+			fileName = "default.bas";								// use the default
+		} else if (!fileName.endsWith(".bas")) {					// if the filename does not
+			fileName += ".bas";										// have the .bas extension
+		}															// then add it
+
+		File dir;
+		if (path.length() == 0) {									// not changing directory
+			path = ProgramPath;										// get absolute path
+		} else {													// directory change
+			dir = new File(ProgramPath, path);						// add new path element(s) to absolute path
+			try { path = dir.getCanonicalPath(); }					// resolve new path
+			catch (IOException e) { path = dir.getAbsolutePath(); }	// if error just fix slashes
+		}
+		dir = new File(path);
+
+		if (path.endsWith(Basic.SAMPLES_DIR)) {						// don't save in sample programs directory
+			path = dir.getParent();
+			dir = new File(path);
+		}
+		if (!dir.exists()) { dir.mkdirs(); }						// make the dirs if needed
+
+		File file = new File(path, fileName);
+
+		// Now dir and file are File objects
+		// for Strings path and path/fileName.
+
+		boolean success = false;
 		IOException ex = null;
-		if (sdDir.exists() && sdDir.canWrite()) {
-			if (!path.equals("")) {
-				sdDir = new File(sdDir.getAbsolutePath() +'/' + path);
-				sdDir.mkdirs();										// make the dirs
-			}
+		if (dir.exists() && dir.canWrite()) {						// good to go
+			ArrayList<String> lines = captureProgram();				// copy the program to a String array
+
 			FileWriter writer = null;
 			try {
-				path = sdDir.getAbsolutePath() + '/';				// now use path for full path.
-				File file = new File(path + theFileName);
 				file.createNewFile();
-				writer = new FileWriter(file);						// write the program
-				for (int i = 0; i < Basic.lines.size(); i++) {
-					writer.write(Basic.lines.get(i).line());
-					writer.write("\n");
+				writer = new FileWriter(file);						// write the program to the file
+				for (String line : lines) {
+					writer.write(line + '\n');
 				}
 				success = true;
 			} catch (IOException e) {
@@ -823,19 +859,22 @@ public class Editor extends Activity {
 				}
 			}
 		}
-		path += theFileName;									// full name for messages
-		if (success) {
-			String base = Basic.getBasePath() + '/';
-			if (path.startsWith(base)) { path = path.substring(base.length()); }
-			Basic.toaster(this, "Saved " + path);				// notify the user
 
-			Basic.SD_ProgramPath = DirPart;						// ProgramPath is relative to source
-			ProgramFileName = theFileName;						// set new Program file name
-			setTitle(Name + ProgramFileName);
-			InitialProgramSize = mText.length();				// Reset initial program size
+		if (success) {
+			// Save bas path after making it relative to rfo-basic/source
+			Run.running_bas = Basic.getRelativePath(file.getPath(), Basic.getSourcePath(null));
+
+			ProgramPath = path;									// record new path
+			ProgramFileName = fileName;							// and file name
+
+			String display = getDisplayPath(file.getPath());	// notify the user
+			Basic.toaster(this, getString(R.string.Saved_FILENAMEARG, display));
+			setTitle(ProgramFileName);
+			InitialProgramSize = mText.length();				// reset initial program size
 			Saved = true;										// indicate the program has been saved
 		} else {
-			String msg = "File not saved: " + ((ex == null) ? path : ex.getMessage());
+			String msg = getString(R.string.File_not_saved) +
+					     ((ex == null) ? path : ex.getMessage());
 			Basic.toaster(this, msg);
 		}
 	} // writeTheFile
@@ -882,7 +921,7 @@ public class Editor extends Activity {
 		.setPositiveButton("Restart Now", new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface dialog, int id) {
 				dialog.cancel();
-				Intent restart = new Intent(Basic.BasicContext, Basic.class);
+				Intent restart = new Intent(getApplicationContext(), Basic.class);
 				startActivity(restart);
 				finish();
 			}
@@ -926,4 +965,43 @@ public class Editor extends Activity {
 		alert.show();
 	}
 
+	// *************************** Static utilities for LOAD/SAVE/DELETE **************************
+
+	public static String getDisplayPath(String path) {
+		File pathFile = new File(path);
+		try { path = pathFile.getCanonicalPath(); }
+		catch (IOException ex) { path = pathFile.getAbsolutePath(); }
+		// mHomePath is absolute path to "rfo-basic",
+		// mAltHomePath is absolute path through "legacy" (if applicable)
+		// mBasePathAndSep is its parent plus a trailing "/".
+		if (path.startsWith(mHomePath)) {					// if starts with home path
+			path = path.substring(mBasePathAndSep.length());	// clip off base path and "/"
+		} else if ((mAltHomePath != null) && path.startsWith(mAltHomePath)) {
+			path = path.substring(mAltBasePathAndSep.length());	// ditto alt path
+		}														// else leave absolute path
+		return path;
+	}
+
+	public static boolean isMarkedDir(String name) {
+		return name.endsWith(DIR_MARK);
+	}
+
+	public static String addDirMark(String name) {
+		return name + DIR_MARK;
+	}
+
+	public static String stripDirMark(String name) {
+		int k = name.length() - DIR_MARK.length();
+		return name.substring(0, k);
+	}
+
+	public static String goUp(String path) {					// change path to go up the directory tree
+		path = new File(path).getParent();
+		if (path == null) { path = SEPARATOR; }					// no parent: assume absolute path and set to root
+		return path;
+	}
+
+	public static String quote(String str) {
+		return '\"' + str + '\"';
+	}
 }

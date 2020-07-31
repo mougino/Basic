@@ -5,7 +5,7 @@
 BASIC! is an implementation of the Basic programming language for
 Android devices.
 
-Copyright (C) 2010 - 2015 Paul Laughton
+Copyright (C) 2010 - 2019 Paul Laughton
 
 This file is part of BASIC! for Android
 
@@ -33,6 +33,7 @@ This file is part of BASIC! for Android
 
     <!-- Activity labels; for "run_name" and "textinput_name" see setup.xml -->
     <string name="editor_name">BASIC! Program Editor</string>
+    <string name="about_name">About BASIC!</string>
     <string name="load_name">BASIC! Load File</string>
     <string name="delete_name">BASIC! Delete File</string>
     <string name="help_name">BASIC! Commands</string>
@@ -40,9 +41,6 @@ This file is part of BASIC! for Android
     <string name="search_name">BASIC! Search</string>
     <string name="format_name">BASIC! Format</string>
     <string name="gr_name">Graphics</string>
-    <string name="cs_name">ClientSocket</string>
-    <string name="auto_run_name">Auto Run</string>
-    <string name="sensors_name">Sensors</string>
     <string name="debug_name">BASIC! Debugger</string>
     <string name="play_sound_name"> </string>
     <string name="select_device"> Select Device</string>
@@ -72,24 +70,49 @@ This file is part of BASIC! for Android
 
     <string name="stt_prompt">"BASIC! Speech To Text"</string>
 
-<string name="run">Run</string>
-<string name="load">Load</string>
-<string name="save">Save</string>
-<string name="delete">Delete</string>
-<string name="search">Search</string>
-<string name="format">Format</string>
-<string name="clear">Clear</string>
-<string name="load_run">Load and Run</string>
-<string name="save_run">Save and Run</string>
-<string name="settings">Preferences</string>
-<string name="spawn">Create Application</string>
-<string name="help">Commands</string>
-<string name="about">About</string>
-<string name="exit">Exit</string>
+	<!-- Editor menu items -->
+	<string name="run">Run</string>
+	<string name="load">Load</string>
+	<string name="save">Save</string>
+	<string name="delete">Delete</string>
+	<string name="search">Search</string>
+	<string name="format">Format</string>
+	<string name="clear">Clear</string>
+	<string name="load_run">Load and Run</string>
+	<string name="save_run">Save and Run</string>
+	<string name="settings">Preferences</string>
+	<string name="spawn">Create Application</string>
+	<string name="help">Commands</string>
+	<string name="about">About</string>
+	<string name="exit">Exit</string>
 
-<string name="stop">Stop</string>
-<string name="editor">Editor</string>
-<string name="pause">Pause</string>
+	<!-- Console menu items -->
+	<string name="stop">Stop</string>
+	<string name="editor">Editor</string>
+	<string name="pause">Pause</string>
+
+	<!-- Preference options to put Editor menu items on Action Bar -->
+	<string name="pref_MAB_key">editor_items_on_action_bar</string>
+	<string name="pref_MAB_title">Menu Items on Action Bar</string>
+	<string name="pref_MAB_summary">Editor menu items to show on action bar</string>
+	<string name="pref_MAB_run_key">editor_menu_run_on_action_bar</string>
+	<string name="pref_MAB_run_title">RUN on action bar</string>
+	<string name="pref_MAB_run_summary">Show RUN on action bar if it fits</string>
+	<string name="pref_MAB_load_key">editor_menu_load_on_action_bar</string>
+	<string name="pref_MAB_load_title">LOAD on action bar</string>
+	<string name="pref_MAB_load_summary">Show LOAD on action bar if it fits</string>
+	<string name="pref_MAB_save_key">editor_menu_save_on_action_bar</string>
+	<string name="pref_MAB_save_title">SAVE on action bar</string>
+	<string name="pref_MAB_save_summary">Show SAVE on action bar if it fits</string>
+	<string name="pref_MAB_clear_key">editor_menu_clear_on_action_bar</string>
+	<string name="pref_MAB_clear_title">CLEAR on action bar</string>
+	<string name="pref_MAB_clear_summary">Show CLEAR on action bar if it fits</string>
+	<string name="pref_MAB_search_key">editor_menu_search_on_action_bar</string>
+	<string name="pref_MAB_search_title">SEARCH on action bar</string>
+	<string name="pref_MAB_search_summary">Show SEARCH on action bar if it fits</string>
+	<string name="pref_MAB_exit_key">editor_menu_exit_on_action_bar</string>
+	<string name="pref_MAB_exit_title">EXIT on action bar</string>
+	<string name="pref_MAB_exit_summary">Show EXIT on action bar if it fits</string>
 
 	<!-- Shortcut warnings -->
 	<string name="no_prog_name">You have not entered a BASIC! program name.</string>
@@ -101,11 +124,142 @@ This file is part of BASIC! for Android
 	<string name="instr_1">Select Cancel to go back to setup</string>
 	<string name="instr_2">or OK to try to create the shortcut anyway.</string>
 
-<string name="use_sdcard">Use SD Card</string>
-<string name="use_sdcard_summary">Use SD Card for files</string>
-<string name="echo">Echo Source</string>
-<string name="echo_summary">Print executing source code</string>
-<string name="restricted">Restricted SD Card I/O</string>
-<string name="restricted_summary">Restrict SD Card I/O to BASIC! directory</string>
+	<!-- About screen text -->
+	<string name="about_text1">You are using version %s of BASIC!</string>
+	<string name="about_text2">\nThe Richard Feynman Observatory\nBASIC!
+								for Android\ncreated by Paul Laughton.\n\nTo
+								learn more about BASIC!,\nselect one of the following:</string>
+	<!-- About button text -->
+	<string name="about_text_btn_home">BASIC! Home Page</string>
+	<string name="about_text_btn_forum">BASIC! User Forum</string>
+	<string name="about_text_btn_programs">BASIC! Users\' Programs\nWritten by members of the user forum</string>
+	<string name="about_text_btn_wiki">BASIC! Wiki\nOnline docs with links to many resources</string>
+	<string name="about_text_btn_bintray">BASIC! on Bintray\nManual, apks, and release notes</string>
+	<string name="about_text_btn_github">BASIC! on GitHub\nSource and bug reports</string>
+	<string name="about_text_btn_license">BASIC! Open-Source License\nThe GNU General Public License, version 3</string>
+	<string name="about_text_btn_privpol">BASIC! Privacy Policy</string>
 
+	<!-- Strings added for localization, 2018, by Hirokazu Yamazaki (puziro) -->
+	<string name="Color_Scheme">Color Scheme</string>
+	<string name="Select_Color_Scheme">Select Color Scheme</string>
+	<string name="Custom_Colors">Custom Colors</string>
+	<string name="Define_Your_Own_Colors">Define Your Own Colors</string>
+	<string name="Screen_Colors">Screen Colors</string>
+	<string name="Select_a_color_scheme_or_custom_colors">Select a color scheme or custom colors</string>
+	<string name="Text_Color">Text Color</string>
+	<string name="Set_Text_Color">Set Text Color</string>
+	<string name="Background_Color">Background Color</string>
+	<string name="Line_Color">Line Color</string>
+	<string name="Set_Background_Color">Set Background Color</string>
+	<string name="Set_Line_Color">Set Line Color</string>
+	<string name="Highlight_Color">Highlight Color</string>
+	<string name="Set_Highlight_Color">Set Highlight Color</string>
+	<string name="Console_Settings">Console Settings</string>
+	<string name="Setting_for_Console_and_Other_Text_Screens">Settings for Console and Other Text Screens</string>
+	<string name="Font_Size">Font Size</string>
+	<string name="Select_Font_Size_for_Console">Select Font Size for Console, etc.</string>
+	<string name="Type_face">Typeface</string>
+	<string name="Select_Typeface_for_Consol">Select Typeface for Console, etc.</string>
+	<string name="Console_Menu">Console Menu</string>
+	<string name="Display_Menu_in_Console_and_TGet">Display Menu in Console and TGet</string>
+	<string name="Console_Lines">Console Lines</string>
+	<string name="Use_Lined_Console">Use Lined Console</string>
+	<string name="Empty_Console_Color">Empty Console Color</string>
+	<string name="Select_Color_of_Unwritten_Console_Lines">Select Color of Unwritten Console Lines</string>
+	<string name="Editor_Settings">Editor Settings</string>
+	<string name="Settings_for_Program_Editor">Settings for Program Editor</string>
+	<string name="Editor_Lines">Editor Lines</string>
+	<string name="Use_Lined_Editor">Use Lined Editor</string>
+	<string name="Editor_Line_Wrap">Editor Line Wrap</string>
+	<string name="Wrap_Long_Editor_Lines">Wrap Long Editor Lines</string>
+	<string name="Editor_AutoIndent">Editor AutoIndent</string>
+	<string name="Enable_Editor_AutoIndent">Enable Editor AutoIndent</string>
+	<string name="Screen_Orientation">Screen Orientation</string>
+	<string name="Select_Orientation">Select Orientation</string>
+	<string name="Graphic_acceleration">Graphic acceleration</string>
+	<string name="Enable_graphic_acceleration">Enable graphic acceleration</string>
+	<string name="Base_Drive">Base Drive</string>
+	<string name="Select_New_Base_Drive">Select New Base Drive</string>
+	<string name="Search_For">Search For:</string>
+	<string name="Replace_With">Replace With:</string>
+	<string name="Next">Next</string>
+	<string name="Done">Done</string>
+	<string name="Replace">Replace</string>
+	<string name="Replace_All">Replace All</string>
+	<string name="Finished">Finished</string>
+	<string name="unnamed_program"> unnamed program</string>
+	<string name="Select_File_To_Load">Select File To Load</string>
+	<string name="Select_file_to_Delete">Select file to Delete</string>
+	<string name="Save_to_FILENAMEARG">Save to %1$s</string>
+	<string name="Saved_FILENAMEARG">Saved %1$s</string>
+	<string name="File_not_saved">File not saved:</string>
+	<string name="Format_your_program">Format your program?</string>
+	<string name="Confirm_Delete">Confirm Delete</string>
+	<string name="Current_Program_Not_Saved">Current Program Not Saved!</string>
+	<string name="Continue">Continue</string>
+	<string name="Syntax_Error">Syntax Error</string>
+	<string name="Nothing_to_execute">Nothing to execute.</string>
+	<string name="Program_ended_with_FOR_without_NEXT">Program ended with FOR without NEXT</string>
+	<string name="Program_ended_with_WHILE_without_REPEAT">Program ended with WHILE without REPEAT</string>
+	<string name="Program_ended_with_DO_without_UNTIL">Program endedb with DO without UNTIL</string>
+	<string name="Execution_halted">Execution halted</string>
+	<string name="Stopped_by_user">Stopped by user.</string>
+	<string name="Bluetooth_not_connected">Bluetooth not connected</string>
+	<string name="Not_previously_connected">Not previously connected</string>
+	<string name="No_Bluetooth_Read_Ready_Interrupt">No Bluetooth Read Ready Interrupt</string>
+	<string name="wd_create_error_DIRARG">Cannot create working directory %1$s</string>
+	<string name="Superuser">Superuser</string>
+	<string name="System_shell">System shell</string>
+	<string name="WHICHARG_not_opened">%1$s not opened</string>
+	<string name="SU_command">SU</string>
+	<string name="System">System</string>
+	<string name="WHICHARG_Exception_EXARG">%1$s Exception: %2$s</string>
+	<string name="Font_not_found_FILEARG">Font file not found: %1$s</string>
+	<string name="Invalid_Font_Pointer">Invalid Font Pointer</string>
+	<string name="SoundPool_not_opened">SoundPool not opened</string>
+	<string name="Stream_count_must_be_0">Stream count must be &gt; 0</string>
+	<string name="Warning_Low_Memory">Warning: Low Memory</string>
+	<string name="already_exists">already exists</string>
+	<string name="Not_a_number_Try_Again">Not a number. Try Again.</string>
+	<string name="Select_View">Select View:</string>
+	<string name="Confirm">Confirm</string>
+	<string name="File_not_directory">File not directory</string>
+	<string name="Source_directory_does_not_exist">Source directory does not exist</string>
+	<string name="System_Error_MSGARG">System Error: %1$s</string>
+	<string name="Nothing_found_to_replace">Nothing found to replace</string>
+	<string name="WHATARG_not_found">%1$s not found.</string>
+	<!-- End of localization strings by puziro, 2018 -->
+	<string name="error_permission_denied">Permission denied by user! Quitting…</string>
+	<string name="display_text_default_first_line">REM Start of BASIC! Program\n</string>
+	<string name="display_text_initial_info">
+		Welcome to BASIC!\n\n
+		Press Menu->About\n
+		to get more information\n
+		about this release, and\n
+		to see the User\'s Manual,\n
+		De Re BASIC!\n\n
+		Press Menu->Clear to clear\n
+		this message and start\n
+		writing your own BASIC!\n
+		program.\n\n</string>
+	<string name="display_text_addendum_dont_keep">
+		Note: if you can\'t load a\n
+		program, check your settings.\n
+		\"Permissions->Storage\"\n
+		must be enabled, and\n
+		\"Developer Options ->\n
+		\u0020Don\'t keep activities\"\n
+		must NOT be checked.\n\n</string>
+	<string name="display_text_cant_load">
+		BASIC! is unable to write\n
+		its sample programs.\n
+		You can write and run\n
+		programs, but you cannot\n
+		save them. You can press\n
+		Menu->More->Preferences\n
+		and select \"Base Drive\"\n
+		to change the setting\n
+		to writable storage.\n\n</string>
+	<string name="display_text_open_comment">!!\n\n</string>
+	<string name="display_text_close_comment">!!</string>
 </resources>

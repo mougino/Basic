@@ -5,7 +5,7 @@
 BASIC! is an implementation of the Basic programming language for
 Android devices.
 
-Copyright (C) 2010 - 2014 Paul Laughton
+Copyright (C) 2010 - 2019 Paul Laughton
 
 This file is part of BASIC! for Android
 
@@ -31,18 +31,17 @@ This file is part of BASIC! for Android
 <view xmlns:android="http://schemas.android.com/apk/res/android"
     class="com.rfo.basic.Editor$LinedEditText"
     android:id="@+id/basic_text"
-	android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:background="#FFFFFFFF"
     android:padding="5dip"
     style="@style/edit_text_l"
-    
+
     android:scrollbars="vertical"
     android:fadingEdge="vertical"
-     android:typeface="monospace"
+    android:typeface="monospace"
     android:gravity="top"
     android:textSize="18sp"
-    android:autoText = "false"
-    android:capitalize = "none"
-	android:scrollHorizontally = "true"
+    android:inputType="textMultiLine"
+    android:scrollHorizontally = "true"
 />

@@ -3,7 +3,7 @@
 BASIC! is an implementation of the Basic programming language for
 Android devices.
 
-Copyright (C) 2010 - 2015 Paul Laughton
+Copyright (C) 2010 - 2019 Paul Laughton
 
 This file is part of BASIC! for Android
 
@@ -22,6 +22,12 @@ This file is part of BASIC! for Android
 
     You may contact the author or current maintainers at http://rfobasic.freeforums.org
 
+    Apache Commons Net
+    Copyright 2001-2011 The Apache Software Foundation
+
+    This product includes software developed by
+    The Apache Software Foundation (http://www.apache.org/).
+
 *************************************************************************************************/
 
 package com.rfo.basic;
@@ -33,14 +39,17 @@ import java.util.ArrayList;
 
 import org.apache.http.util.EncodingUtils;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.DownloadListener;
@@ -53,15 +62,15 @@ import android.webkit.WebViewClient;
 
 
 public class Web extends Activity {
-	//Log.v(Web.LOGTAG, " " + Web.CLASSTAG + " Line Buffer  " + ExecutingLineBuffer);
-
-	WebView engine;
-	public static TheWebView aWebView = null;
+	//Log.v(LOGTAG, "Line Buffer " + ExecutingLineBuffer);
 	private static final String LOGTAG = "Web";
-	private static final String CLASSTAG = Web.class.getSimpleName();
 
 	public static final String EXTRA_SHOW_STATUSBAR = "statusbar";
 	public static final String EXTRA_ORIENTATION = "orientation";
+
+	public static Context mContext = null;
+	public static TheWebView aWebView = null;
+	private WebView engine;
 
 	//******************************** Intercept BACK Key *************************************
 
@@ -79,9 +88,13 @@ public class Web extends Activity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		Log.v(LOGTAG, "onCreate");
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.web);
+		ContextManager cm = Basic.getContextManager();
+		cm.registerContext(ContextManager.ACTIVITY_WEB, this);
+		cm.setCurrent(ContextManager.ACTIVITY_WEB);
 
+		setContentView(R.layout.web);
 		View v = findViewById(R.id.web_engine);
 
 		Intent intent = getIntent();
@@ -120,30 +133,65 @@ public class Web extends Activity {
 				//Required functionality here
 				return super.onJsAlert(view, url, message, result);
 			}
+			// The 2 following methods allow to play fullscreen HTML5 videos:
+			Dialog d;
+			@Override
+			public void onShowCustomView (View v, final CustomViewCallback c) {
+				d = new Dialog (Basic.getContextManager().getContext(), 
+						android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+				v.setBackgroundColor(getResources().getColor(android.R.color.black));
+				d.setContentView(v);
+				d.setOnDismissListener(new DialogInterface.OnDismissListener() {
+					@Override
+					public void onDismiss (DialogInterface d) {
+						c.onCustomViewHidden();
+						onHideCustomView();
+					}
+				});
+				d.show();
+			}
+			@Override
+			public void onHideCustomView () {
+				d.hide();
+				super.onHideCustomView();
+			}
 		});
 
 	}
 
 	@Override
-	protected void onPause() {
-		Log.v(LOGTAG, " " + CLASSTAG + " onPause");
-		Run.mEventList.add(new Run.EventHolder(WEB_STATE, ON_PAUSE, null));
-		super.onPause();
-	}
-
-	@Override
 	protected void onResume() {
-		Log.v(LOGTAG, " " + CLASSTAG + " onResume");
+		Log.v(LOGTAG, "onResume " + this);
+		Basic.getContextManager().onResume(ContextManager.ACTIVITY_WEB);
 		Run.mEventList.add(new Run.EventHolder(WEB_STATE, ON_RESUME, null));
+		mContext = this;
 		super.onResume();
 	}
 
+	@Override
+	protected void onPause() {
+		Log.v(LOGTAG, "onPause");
+		Basic.getContextManager().onPause(ContextManager.ACTIVITY_WEB);
+		Run.mEventList.add(new Run.EventHolder(WEB_STATE, ON_PAUSE, null));
+		mContext = null;
+		super.onPause();
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	private void setOrientation(int orientation) {	// Convert and apply orientation setting
 		switch (orientation) {
 			default:
-			case -1: orientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR; break;
-			case 0:  orientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE; break;
 			case 1:  orientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT; break;
+			case 3:  orientation = (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+								 ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+								 : ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT;
+				break;
+			case 0:  orientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE; break;
+			case 2:  orientation = (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+								 ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+								 : ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE;
+				break;
+			case -1: orientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR; break;
 		}
 		setRequestedOrientation(orientation);
 	}
@@ -202,15 +250,22 @@ public class Web extends Activity {
 
 	@Override
 	protected void onStop() {
-		//	aWebView = null; // otherwise html.load doses not work after a return to BASIC! Thanks to LUCA! !! 2013-10-11 gt
-		Log.v(Web.LOGTAG, " " + Web.CLASSTAG + " onStop ");
+		//	aWebView = null; // otherwise html.load does not work after a return to BASIC! Thanks to LUCA! !! 2013-10-11 gt
+		Log.v(Web.LOGTAG, "onStop ");
 		super.onStop();
+	}
+
+	@Override
+	public void finish() {
+		// Tell the ContextManager we're done, if it doesn't already know.
+		Basic.getContextManager().unregisterContext(ContextManager.ACTIVITY_WEB, this);
+		super.finish();
 	}
 
 	@Override
 	protected void onDestroy() {
 		aWebView = null;
-		Log.v(Web.LOGTAG, " " + Web.CLASSTAG + " onDestroy ");
+		Log.v(Web.LOGTAG, "onDestroy ");
 		if (engine != null) engine.destroy();
 		super.onDestroy();
 	}
