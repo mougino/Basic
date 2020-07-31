@@ -29,7 +29,7 @@ This file is part of BASIC! for Android
 	-->
 	
 <view xmlns:android="http://schemas.android.com/apk/res/android"
-    class="com.rfo.basic.Editor$LinedEditText"
+    class="com.rfo.Basic.Editor$LinedEditText"
     android:id="@+id/basic_text"
     android:layout_width="match_parent"
     android:layout_height="match_parent"

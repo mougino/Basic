@@ -24,15 +24,15 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
-import static com.rfo.basic.Editor.GO_UP;
-import static com.rfo.basic.Editor.addDirMark;
-import static com.rfo.basic.Editor.isMarkedDir;
-import static com.rfo.basic.Editor.stripDirMark;
-import static com.rfo.basic.Editor.getDisplayPath;
-import static com.rfo.basic.Editor.goUp;
-import static com.rfo.basic.Editor.quote;
+import static com.rfo.Basic.Editor.GO_UP;
+import static com.rfo.Basic.Editor.addDirMark;
+import static com.rfo.Basic.Editor.isMarkedDir;
+import static com.rfo.Basic.Editor.stripDirMark;
+import static com.rfo.Basic.Editor.getDisplayPath;
+import static com.rfo.Basic.Editor.goUp;
+import static com.rfo.Basic.Editor.quote;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.rfo.basic.Basic.ColoredTextAdapter;
+import com.rfo.Basic.Basic.ColoredTextAdapter;
 
 
 // Loads a file. Called from the Editor when user selects Menu->Load

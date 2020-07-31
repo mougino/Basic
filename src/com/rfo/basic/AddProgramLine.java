@@ -26,12 +26,12 @@
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
-import static com.rfo.basic.Format.ASCII_SPACE;
-import static com.rfo.basic.Format.ASCII_QUOTE;
-import static com.rfo.basic.Format.QUOTES;
-import static com.rfo.basic.Format.WHITESPACE;
+import static com.rfo.Basic.Format.ASCII_SPACE;
+import static com.rfo.Basic.Format.ASCII_QUOTE;
+import static com.rfo.Basic.Format.QUOTES;
+import static com.rfo.Basic.Format.WHITESPACE;
 
 import java.io.BufferedReader;
 import java.io.IOException;

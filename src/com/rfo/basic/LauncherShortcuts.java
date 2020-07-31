@@ -24,7 +24,7 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.io.File;
 
@@ -55,7 +55,7 @@ import android.widget.TextView;
  */
 
 public class LauncherShortcuts extends Activity {
-	public static final String EXTRA_LS_FILENAME = "com.rfo.basic.fn";
+	public static final String EXTRA_LS_FILENAME = "com.rfo.Basic.fn";
 	private EditText theText1;
 	private EditText theText2;
 	private EditText theText3;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

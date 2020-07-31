@@ -24,7 +24,7 @@
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.util.ArrayList;
 

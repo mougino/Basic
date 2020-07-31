@@ -32,7 +32,7 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -111,8 +111,8 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.ByteArrayBuffer;
 
-import com.rfo.basic.Basic.TextStyle;
-import com.rfo.basic.GPS.GpsData;
+import com.rfo.Basic.Basic.TextStyle;
+import com.rfo.Basic.GPS.GpsData;
 import com.rfo.basic.notify.NotifyClassic;
 
 import android.annotation.SuppressLint;
@@ -17898,7 +17898,6 @@ public class Run extends Activity {
 
 	// ************************************** Notify Command **************************************
 
-	@TargetApi(Build.VERSION_CODES.O)
 	private boolean executeNOTIFY() {
 
 		int NOTIFICATION_ID = 1;	// These two constants are without meaning in this application

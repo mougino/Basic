@@ -25,7 +25,7 @@
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -68,8 +68,8 @@ public class Editor extends Activity {
 	private static final String STATE_SAVED = "isSaved";
 	private static final String STATE_ERROR_DISPLACEMENT = "errorDisplacement";
 	private static final String STATE_MTEXT_DATA = "theText";
-	public static final String EXTRA_RESTART = "com.rfo.basic.doRestart";
-	public static final String EXTRA_LOADPATH = "com.rfo.basic.initLoadPath";
+	public static final String EXTRA_RESTART = "com.rfo.Basic.doRestart";
+	public static final String EXTRA_LOADPATH = "com.rfo.Basic.initLoadPath";
 
 	// Since Android 4.2, "external storage" may be emulated and the path may included the user id.
 	// There is another path that uses "legacy" instead of the user id.

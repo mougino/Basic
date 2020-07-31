@@ -30,9 +30,9 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
-import static com.rfo.basic.Run.EventHolder.*;
+import static com.rfo.Basic.Run.EventHolder.*;
 
 import java.net.URLDecoder;
 import java.util.ArrayList;

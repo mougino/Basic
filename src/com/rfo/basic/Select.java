@@ -24,11 +24,11 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.util.ArrayList;
 
-import com.rfo.basic.Basic.ColoredTextAdapter;
+import com.rfo.Basic.Basic.ColoredTextAdapter;
 
 import android.app.ListActivity;
 import android.content.Intent;

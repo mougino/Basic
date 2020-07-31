@@ -24,7 +24,7 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import android.content.Context;
 import android.os.Bundle;

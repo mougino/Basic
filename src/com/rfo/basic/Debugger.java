@@ -1,4 +1,4 @@
-package com.rfo.basic;
+package com.rfo.Basic;
 
 /* Through BASIC! version v01.75.02, this file held the Application sub-class
  * that initialized the Application Crash Reports for Android (ACRA).

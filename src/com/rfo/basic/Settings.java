@@ -24,7 +24,7 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -261,11 +261,6 @@ public class Settings extends PreferenceActivity {
 	public static String getEmptyConsoleColor(Context context) {
 		return PreferenceManager.getDefaultSharedPreferences(context)
 				.getString("empty_color_pref", "background");
-	}
-
-	public static boolean getGraphicAcceleration(Context context){
-		return PreferenceManager.getDefaultSharedPreferences(context)
-				.getBoolean("gr_accel", false);
 	}
 
 	public static String getColorScheme(Context context) {

@@ -24,7 +24,7 @@ Copyright (C) 2015 - 2019 Paul Laughton
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import android.content.Context;
 import android.util.Log;

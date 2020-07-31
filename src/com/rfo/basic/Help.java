@@ -24,7 +24,7 @@ This file is part of BASIC! for Android
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -32,8 +32,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
-import com.rfo.basic.Basic.ColoredTextAdapter;
-import com.rfo.basic.Basic.TextStyle;
+import com.rfo.Basic.Basic.ColoredTextAdapter;
+import com.rfo.Basic.Basic.TextStyle;
 
 import android.app.ListActivity;
 import android.content.Context;

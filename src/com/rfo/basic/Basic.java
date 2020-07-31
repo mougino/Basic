@@ -26,7 +26,7 @@ Copyright (C) 2010 - 2019 Paul Laughton
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

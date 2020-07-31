@@ -39,7 +39,7 @@ This file is part of BASIC! for Android
         android:id="@+id/console"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        class="com.rfo.basic.Run$ConsoleListView"
+        class="com.rfo.Basic.Run$ConsoleListView"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:transcriptMode="alwaysScroll" />
