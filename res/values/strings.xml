@@ -130,7 +130,7 @@ This file is part of BASIC! for Android
 								for Android\ncreated by Paul Laughton.\n\nTo
 								learn more about BASIC!,\nselect one of the following:</string>
 	<!-- About button text -->
-	<string name="about_text_btn_home">BASIC! Home Page</string>
+	<string name="about_text_btn_manual">BASIC! Online Manual</string>
 	<string name="about_text_btn_forum">BASIC! User Forum</string>
 	<string name="about_text_btn_programs">BASIC! Users\' Programs\nWritten by members of the user forum</string>
 	<string name="about_text_btn_wiki">BASIC! Wiki\nOnline docs with links to many resources</string>

@@ -24,7 +24,7 @@ Copyright (C) 2010 - 2019 Paul Laughton
 
 *************************************************************************************************/
 
-package com.rfo.basic;
+package com.rfo.Basic;
 
 
 import android.app.Activity;
@@ -55,14 +55,14 @@ public class About extends Activity {
 		TextView tv2 = (TextView)findViewById(R.id.about_tv2);
 		tv2.setText(getString(R.string.about_text2));
 
-		setupButton(R.id.about_btn_home,     "http://rfo-basic.com");
+		setupButton(R.id.about_btn_manual,   "http://mougino.free.fr/rfo-basic/manual/");
 		setupButton(R.id.about_btn_forum,    "https://www.tapatalk.com/groups/rfobasic/");
 		setupButton(R.id.about_btn_programs, "http://laughton.com/basic/programs");
 		setupButton(R.id.about_btn_wiki,     "https://rfobasic.miraheze.org/wiki/Main_Page");
 		setupButton(R.id.about_btn_bintray,  "https://bintray.com/rfo-basic/android/RFO-BASIC");
 		setupButton(R.id.about_btn_github,   "https://github.com/RFO-BASIC");
 		setupButton(R.id.about_btn_license,  "https://www.gnu.org/licenses/gpl-3.0-standalone.html");
-		setupButton(R.id.about_btn_privpol,  "http://rfo-basic.com/PrivacyPolicy.html");
+		setupButton(R.id.about_btn_privpol,  "http://mougino.free.fr/rfo-basic/PrivacyPolicy.html");
 	}
 
 	private void setupButton(int id, final String url) {

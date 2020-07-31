@@ -12,5 +12,5 @@ Join the forum and join
 the BASIC! development
 team.
 !!
-BROWSE "http://rfobasic.freeforums.org/"
+BROWSE "https://www.tapatalk.com/groups/rfobasic/"
 END

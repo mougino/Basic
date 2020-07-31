@@ -61,10 +61,10 @@ This file is part of BASIC! for Android
 			android:typeface="serif" />
 
 		<Button
-			android:id="@+id/about_btn_home"
+			android:id="@+id/about_btn_manual"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:text="@string/about_text_btn_home"
+			android:text="@string/about_text_btn_manual"
 			android:textAllCaps="false" />
 
 		<Button

@@ -21,7 +21,7 @@ to a minute. Be patient.
 !!
 
 file$ = "De_Re_BASIC!.pdf"
-BYTE.OPEN r, fn, "http://dl.bintray.com/rfo-basic/android/v" + version$() + "/" + file$
+BYTE.OPEN r, fn, "https://bintray.com/rfo-basic/android/download_file?file_path=v" + version$() + "/" + file$
 POPUP "Be patient. Wait for 'Download Done' Message", 0, 0, 1
 BYTE.COPY fn, file$
 PRINT "Download Done."
