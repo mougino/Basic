@@ -184,6 +184,8 @@ import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
 import android.telephony.cdma.CdmaCellLocation;
 import android.telephony.gsm.GsmCellLocation;
+import android.telephony.SubscriptionManager;
+import android.telephony.SubscriptionInfo;
 import android.text.ClipboardManager;
 import android.text.format.Time;
 import android.util.AttributeSet;
@@ -10750,7 +10752,15 @@ public class Run extends Activity {
 		Var.Val val = mVal;
 
 		Locale loc = Locale.getDefault();
+		
 		TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+		List<SubscriptionInfo> sl = null;
+
+        if (Build.VERSION.SDK_INT >= 22) { // Starting Lolipop MR1
+            SubscriptionManager sm = (SubscriptionManager) getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+            sl = sm.getActiveSubscriptionInfoList();
+        }
+
 		String failMsg = "Not available";
 		String[] keys = {
 			"Brand", "Model", "Device", "Product", "OS",
@@ -10758,11 +10768,17 @@ public class Run extends Activity {
 			"PhoneType", "PhoneNumber", "DeviceID",
 			"SIM SN", "SIM MCC/MNC", "SIM Provider"
 		};
-		String[] vals = {
+		String simSN;
+		if (Build.VERSION.SDK_INT < 22) { // Before Lolipop MR1
+			simSN = getSimSN(tm, failMsg);
+		} else {
+			simSN = getSimSN(sl, failMsg);
+		}
+        String[] vals = {
 			Build.BRAND, Build.MODEL, Build.DEVICE, Build.PRODUCT, Build.VERSION.RELEASE,
 			loc.getDisplayLanguage(), loc.toString(),
 			getPhoneType(tm), getPhoneNumber(tm, failMsg),
-			getDeviceID(tm, failMsg), getSimSN(tm, failMsg),
+			getDeviceID(tm, failMsg), simSN,
 			getSimOperator(tm, failMsg), getSimOpName(tm, failMsg)
 		};
 
@@ -17512,7 +17528,15 @@ public class Run extends Activity {
 
 	private String getDeviceID(TelephonyManager tm, String failMsg) {
 		if (tm == null) { tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE); }
-		String id = (tm != null) ? tm.getDeviceId() : null;
+		String id;
+		if (Build.VERSION.SDK_INT < 29) {
+		  id = (tm != null) ? tm.getDeviceId() : null;
+		} else {
+		  id = (tm != null) ? android.provider.Settings.Secure.getString(
+								getContext().getContentResolver(),
+								android.provider.Settings.Secure.ANDROID_ID)
+							: null;
+		}
 		return (id != null) ? id : failMsg;
 	}
 
@@ -17561,7 +17585,7 @@ public class Run extends Activity {
 		return (tm != null) ? tm.getSimState() : TelephonyManager.SIM_STATE_UNKNOWN;
 	}
 
-	private String getSimSN(TelephonyManager tm, String failMsg) {
+	private String getSimSN(TelephonyManager tm, String failMsg) { // for API < 22
 		if (tm == null) { tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE); }
 		String sn = failMsg;
 		if (tm != null) {
@@ -17570,6 +17594,18 @@ public class Run extends Activity {
 			else if (state == TelephonyManager.SIM_STATE_READY) {
 				String realSN = tm.getSimSerialNumber();
 				if (realSN != null) { sn = realSN; }
+			}
+		}
+		return sn;
+	}
+
+	private String getSimSN(List<SubscriptionInfo> sl, String failMsg) {	// for API >= 22
+		String sn = failMsg;
+		if (sl != null) {
+			for (SubscriptionInfo subsInfo : sl) {
+				if (subsInfo != null) {
+					sn  = subsInfo.getIccId();
+				}
 			}
 		}
 		return sn;
