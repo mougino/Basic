@@ -29,36 +29,29 @@ This file is part of BASIC! for Android
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.rfo.basic"
-    android:versionCode="1920"
+    package="com.rfo.Basic"
+    android:versionCode="1922"
     android:versionName="1.92"
     android:installLocation="auto"
     tools:ignore="UnusedAttribute"> <!-- installLocation not available in API 7 -->
 
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />
-    <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION" />
-    <uses-permission android:name="android.permission.VIBRATE"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.CALL_PHONE" />
+     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+     <uses-permission android:name="android.permission.INTERNET" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.VIBRATE" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.WAKE_LOCK" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.CAMERA" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.BLUETOOTH" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.RECORD_AUDIO" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.READ_PHONE_STATE" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.CALL_PHONE" android:required="false"></uses-permission>
+     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" android:required="false"></uses-permission>
 
-    <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
-    <!-- <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED">android:required="false" /> -->
-
-    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
-    <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
 
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
@@ -71,13 +64,14 @@ This file is part of BASIC! for Android
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="28" />
+    <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="29" />
 
     <supports-screens android:xlargeScreens="true" />
 
     <application
         android:hardwareAccelerated="true"
         android:allowBackup="true"
+        android:requestLegacyExternalStorage="true"
         android:icon="@drawable/icon"
         android:label="@string/app_name" >
         <uses-library android:name="org.apache.http.legacy" android:required="false"/>
